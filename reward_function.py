@@ -1,4 +1,4 @@
-# reward_function.py
+##  Reward Learning  ##
 
 import numpy as np
 from collections import deque
@@ -22,6 +22,12 @@ class RewardFunction:
         
         self.mission_progress = 0
         self.base_building_progress = 0
+
+        # New attributes
+        self.previous_technology = set()
+        self.previous_milestones = set()
+        self.previous_standing = {}
+        self.previous_discovered_words = set()
 
     def calculate_reward(self, env):
         total_reward = (
@@ -53,6 +59,14 @@ class RewardFunction:
         if env.current_planet and env.current_planet not in env.discovered_planets:
             reward += 10
         
+        # New: Reward for using portals or teleporters
+        if hasattr(env, 'used_portal') and env.used_portal:
+            reward += 5
+        
+        # New: Reward for discovering and activating ancient alien structures
+        if hasattr(env, 'activated_structures'):
+            reward += len(env.activated_structures) * 2
+        
         return reward
 
     def _resource_reward(self, env):
@@ -74,6 +88,16 @@ class RewardFunction:
         if hasattr(env, 'crafted_items'):
             reward += len(env.crafted_items) * 1
         
+        # New: Reward for efficient inventory management
+        if hasattr(env, 'inventory_capacity'):
+            free_space = env.inventory_capacity - sum(env.inventory.values())
+            reward += free_space * 0.01  # Small reward for maintaining free inventory space
+        
+        # New: Reward for selling items at a profit
+        if hasattr(env, 'sold_items'):
+            for item, profit in env.sold_items.items():
+                reward += profit * 0.05
+        
         return reward
 
     def _survival_reward(self, env):
@@ -94,6 +118,14 @@ class RewardFunction:
         if hasattr(env, 'hazard_level'):
             reward += env.hazard_level * 0.1
         
+        # New: Reward for efficient use of life support systems
+        if hasattr(env, 'life_support_efficiency'):
+            reward += env.life_support_efficiency * 0.2
+        
+        # New: Reward for surviving extreme weather events
+        if hasattr(env, 'survived_extreme_event') and env.survived_extreme_event:
+            reward += 5
+        
         return reward
 
     def _discovery_reward(self, env):
@@ -110,6 +142,17 @@ class RewardFunction:
         # Reward for uploading discoveries
         if hasattr(env, 'uploaded_discoveries'):
             reward += len(env.uploaded_discoveries) * 2
+        
+        # New: Reward for learning alien languages
+        new_words = len(env.discovered_words) - len(self.previous_discovered_words)
+        reward += new_words * 0.5
+        
+        # New: Reward for discovering rare resources or exotic planets
+        if hasattr(env, 'discovered_rare_resources'):
+            reward += len(env.discovered_rare_resources) * 3
+        
+        if hasattr(env, 'discovered_exotic_planet') and env.discovered_exotic_planet:
+            reward += 10
         
         return reward
 
@@ -130,6 +173,22 @@ class RewardFunction:
         if hasattr(env, 'completed_missions'):
             reward += len(env.completed_missions) * 20
         
+        # New: Reward for unlocking new technologies
+        new_tech = len(env.unlocked_technology) - len(self.previous_technology)
+        reward += new_tech * 5
+        
+        # New: Reward for achieving milestones
+        new_milestones = len(env.achieved_milestones) - len(self.previous_milestones)
+        reward += new_milestones * 10
+        
+        # New: Reward for improving standing with alien races
+        for race, standing in env.faction_standing.items():
+            if race in self.previous_standing:
+                standing_change = standing - self.previous_standing[race]
+                reward += standing_change * 2
+            else:
+                reward += standing * 2  # New race discovered
+        
         return reward
 
     def _update_previous_states(self, env):
@@ -147,6 +206,12 @@ class RewardFunction:
         if hasattr(env, 'base_building_progress'):
             self.base_building_progress = env.base_building_progress
 
+        # Update new attributes
+        self.previous_technology = env.unlocked_technology.copy()
+        self.previous_milestones = env.achieved_milestones.copy()
+        self.previous_standing = env.faction_standing.copy()
+        self.previous_discovered_words = env.discovered_words.copy()
+
     def reset(self):
         self.previous_inventory = {}
         self.previous_units = 0
@@ -159,3 +224,9 @@ class RewardFunction:
         
         self.mission_progress = 0
         self.base_building_progress = 0
+
+        # Reset new attributes
+        self.previous_technology = set()
+        self.previous_milestones = set()
+        self.previous_standing = {}
+        self.previous_discovered_words = set()
