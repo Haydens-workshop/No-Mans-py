@@ -1,4 +1,5 @@
-# No-Mans-py# No Man's Sky AI Project
+# No-Man's-AI
+No Man's Sky AI Project
 
 ## Overview
 
